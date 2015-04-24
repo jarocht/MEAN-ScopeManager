@@ -21,15 +21,15 @@
                         <div class="col-xs-1 col-md-1">Forecast</div>
                     </div>
                     <div class="row text-left" ng-repeat="entry in recordsList[$index] | orderBy:'priority'">
-                        <input class="col-xs-1 col-md-1 btn-success" ng-model="entry.priority" ng-model-options="{ updateOn: 'blur' }" ng-change="updateRecordPriority(engineerList.indexOf(engineer), entry)" />
-                        <input class="col-xs-2 col-md-2 btn-primary" ng-model="entry.customerName" ng-change="updateRecord(engineerList.indexOf(engineer), entry)" />
-                        <input class="col-xs-1 col-md-1 btn-primary" ng-model="entry.gearsId" ng-change="updateRecord(engineerList.indexOf(engineer), entry)" />
-                        <input class="col-xs-1 col-md-1 btn-info" ng-model="entry.typeRefNumber" disabled />
-                        <select class="col-xs-2 col-md-2 btn-primary" ng-model="types" ng-change="updateRecordType(engineerList.indexOf(engineer), entry)">
+                        <input class="col-xs-1 col-md-1 btn-success" ng-model="entry.priority" ng-model-options="{ updateOn: 'blur' }" ng-change="updateRecord(entry)" />
+                        <input class="col-xs-2 col-md-2 btn-primary" ng-model="entry.customerName" ng-change="updateRecord(entry)" />
+                        <input class="col-xs-1 col-md-1 btn-primary" ng-model="entry.gearsId" ng-change="updateRecord(entry)" />
+                        <input class="col-xs-1 col-md-1 btn-info" ng-model="entry.typeRefNumber" disabled ng-change="updateRecord(entry)" />
+                        <select class="col-xs-2 col-md-2 btn-primary" ng-model="entry.typeText" ng-change="updateRecord(entry)">
                             <option ng-repeat="type in types" ng-selected="entry.typeRefNumber - 1 == $index">{{type}}</option>
                         </select>
-                        <input class="col-xs-2 col-md-2 btn-primary" ng-model="entry.engagementManager" ng-change="updateRecord(engineerList.indexOf(engineer), entry)" />
-                        <input class="col-xs-1 col-md-1 btn-warning" ng-model="entry.hours" ng-model-options="{ updateOn: 'blur' }" ng-change="updateRecordHours(engineerList.indexOf(engineer))">
+                        <input class="col-xs-2 col-md-2 btn-primary" ng-model="entry.engagementManager" ng-change="updateRecord(entry)" />
+                        <input class="col-xs-1 col-md-1 btn-warning" ng-model="entry.hours" ng-model-options="{ updateOn: 'blur' }" ng-change="updateRecord(entry)">
                         <input class="col-xs-1 col-md-1 btn-info" ng-model="entry.forecast" disabled>
                         <button class="col-xs-1 col-md-1 btn-danger" ng-click="removeRecord(entry)">Delete</button>
                     </div>
@@ -37,12 +37,13 @@
                 </div>
                 <div class="row">
                     <div class="row">
-                        <select ng-model="selectedEngineer" ng-options="engineer.name for engineer in engineerList">
+                        <select ng-model="newRecord.owner">
                             <option value="">Choose Engineer:</option>
+                            <option value="{{engineer.name}}" ng-repeat="engineer in engineerList">{{engineer.name}}</option>
                         </select>
                     </div>
-                    <form ng-submit="addRecord(newRecord, selectedEngineer)" class="row">
-                        <input class="col-xs-1 col-md-1" value="" ng-model="newRecord.priority" ng-change="records.$save(entry)" />
+                    <form ng-submit="addRecord(newRecord)" class="row">
+                        <input class="col-xs-1 col-md-1" value="" ng-model="newRecord.priority" />
                         <input class="col-xs-2 col-md-2" value="" ng-model="newRecord.customerName" />
                         <input class="col-xs-1 col-md-1" value="" ng-model="newRecord.gearsId" />
                         <input disabled class="col-xs-1 col-md-1" value="" ng-model="newRecord.typeRefNumber" />
@@ -121,7 +122,6 @@
                 }
 
                 service.addRecord = function (record, callback) {
-                    console.log(record);
                     $http.post(baseUrl + '/add', record).
                     success(function (data, status, headers, config) {
                         data.success = true;
@@ -129,6 +129,18 @@
                     }).
                     error(function (data, status, headers, config) {
                         console.log("POST Error in 'addRecord() Status: " + status);
+                        callback({ "success": false });
+                    });
+                }
+
+                service.updateRecord = function(record, callback) {
+                    $http.post(baseUrl + '/update', record).
+                    success(function (data, status, headers, config) {
+                        data.success = true;
+                        callback(data);
+                    }).
+                    error(function (data, status, headers, config) {
+                        console.log("POST Error in 'updateRecord() Status: " + status);
                         callback({ "success": false });
                     });
                 }
@@ -152,17 +164,21 @@
                     }
                 });
 
+                function loadRecords() {
+                    //TODO Check Priority and Forcast data
+                    $scope.recordsList = new Array($scope.engineerList.length);
+                    for (var i = 0; i < $scope.engineerList.length; i++) {
+                        dbFactory.getRecordsByUser($scope.engineerList[i].name, i, function (data, ownerIndex) {
+                            if (data.success) {
+                                $scope.recordsList[ownerIndex] = data;
+                            }
+                        });
+                    }                    
+                }
+
                 $scope.$watch("engineerList", function (newValue, oldValue) {
                     if ($scope.engineerList.length > 0) {
-                        $scope.recordsList = new Array($scope.engineerList.length);
-                        for (var i = 0; i < $scope.engineerList.length; i++) {
-                            dbFactory.getRecordsByUser($scope.engineerList[i].name, i, function (data, index) {
-                                if (data.success) {
-                                    $scope.recordsList[index] = data;
-                                    console.log(data);
-                                }
-                            });
-                        }
+                        loadRecords();
                     }
                 });
 
@@ -170,46 +186,35 @@
                     console.log(entry._id);
                     dbFactory.removeRecord(entry._id, function (data) {
                         if (data.success) {
-                            console.log(data);
+                            loadRecords();
                         }
                     });
                 }
 
-                $scope.newRecord = {};
-                $scope.addRecord = function (entry, owner) {
-                    entry.owner = owner.name;
+                $scope.addRecord = function (entry) {
                     entry.priority = parseInt(entry.priority);
                     entry.gearsId = parseInt(entry.gearsId);
                     entry.hours = parseInt(entry.hours);
 
-                    //console.log(entry);
-
                     dbFactory.addRecord(entry, function(data) {
                         if (data.success) {
-                            console.log(data);
+                            loadRecords();
+                            $scope.newRecord = {};
                         }
                     });
                 }
 
-                function clearForm() {
-                    $scope.priority = "";
-                    $scope.customer = "";
-                    $scope.gearsId = "";
-                    $scope.typeNumber = "";
-                    $scope.typeText = "Choose Class";
-                    $scope.em = "";
-                    $scope.hours = "";
-                    $scope.forecast = "";
-                }
+                $scope.updateRecord = function (record) {
+                    if (record.typeText != undefined) {
+                        var index = $scope.types.indexOf(record.typeText);
+                        record.typeRefNumber = index > -1 ? index + 1 : null;
+                    }
 
-                //Generic update, use when change doesn't affect forecast/priority
-                $scope.updateRecord = function (engineerNum, entry) {
-                    entry.priority = parseInt(entry.priority);
-                    entry.typeNumber = parseInt(entry.typeNumber);
-                    entry.hours = parseFloat(entry.hours);
-                    entry.forecast = parseFloat(entry.forecast);
-
-                    $scope.recordsList[engineerNum].$save(entry);
+                    dbFactory.updateRecord(record, function(data) {
+                        if (data.success) {
+                            console.log(data);
+                        }
+                    });
                 }
 
                 $scope.updateRecordHours = function (engineerNum) {

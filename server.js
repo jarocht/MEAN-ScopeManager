@@ -42,15 +42,30 @@ app.get('/records', function (req, res) {
 });
 
 app.post('/remove/:id', function (req, res) {
-    console.log(req.params.id);
     ScopeRecord.remove({ _id: req.params.id }, function (err) {
         if (err) return console.error(err);
         res.send({ "removed": req.params.id });
     });
 });
 
+app.post('/update', function(req, res) {
+    ScopeRecord.findById(req.body._id, function(err, record) {
+        record.customerName = req.body.customerName;
+        record.engagementManager = req.body.engagementManager;
+        record.gearsId = req.body.gearsId;
+        record.hours = req.body.hours;
+        record.priority = req.body.priority;
+        record.typeRefNumber = req.body.typeRefNumber;
+        record.owner = req.body.owner;
+
+        record.save(function (errr) {
+            if (errr) return console.error(errr);
+            res.send({ "updated": req.body._id });
+        });
+    });
+});
+
 app.post('/add', function (req, res) {
-    console.log("body: " + JSON.stringify(req.body));
     var record = new ScopeRecord(req.body);
     record.save(function (err, post) {
         if (err) return console.error(err);
