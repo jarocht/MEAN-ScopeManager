@@ -19,7 +19,6 @@ app.get('/users', function (req, res) {
 
 //User Records, by owner (:name), sorted by priority, ascending
 app.get('/user/:name', function (req, res) {
-    console.log(req.params);
     ScopeRecord.find({ "owner": req.params.name }, null, {sort: {priority: 1} }, function (err, records) {
         if (err) return console.error(err);
         res.send(records);
@@ -40,6 +39,14 @@ app.get('/records', function (req, res) {
     });
 });
 
+app.post('/remove/:id', function (req, res) {
+    console.log(req.params.id);
+    ScopeRecord.remove({ _id: req.params.id }, function (err) {
+        if (err) return console.error(err);
+        res.send({ "removed": req.params.id });
+    });
+});
+
 var server = app.listen(3000, function () {
 
     var host = server.address().address;
@@ -50,7 +57,7 @@ var server = app.listen(3000, function () {
 });
 
 mongoose.connect('mongodb://Jaroch02.supportlab.inin.com/test');
-mongoose.set('debug', true);
+//mongoose.set('debug', true);
 var db = mongoose.connection;
 db.on('error', console.error.bind(console, 'connection error:'));
 db.once('open', function (callback) {

@@ -31,7 +31,7 @@
                         <input class="col-xs-2 col-md-2 btn-primary" ng-model="entry.engagementManager" ng-change="updateRecord(engineerList.indexOf(engineer), entry)" />
                         <input class="col-xs-1 col-md-1 btn-warning" ng-model="entry.hours" ng-model-options="{ updateOn: 'blur' }" ng-change="updateRecordHours(engineerList.indexOf(engineer))">
                         <input class="col-xs-1 col-md-1 btn-info" ng-model="entry.forecast" disabled>
-                        <button class="col-xs-1 col-md-1 btn-danger" ng-click="removeRecord(engineer, entry)">Delete</button>
+                        <button class="col-xs-1 col-md-1 btn-danger" ng-click="remove(entry)">Delete</button>
                     </div>
                     <br />
                 </div>
@@ -58,6 +58,7 @@
                 </div>
             </div>
         </div>
+        <script type="text/javascript" src="https://code.jquery.com/jquery-2.1.3.min.js"></script>
         <script type="text/javascript" src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
         <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.2/angular.min.js"></script>
         <script type="text/javascript" src="https://cdn.firebase.com/js/client/2.2.0/firebase.js"></script>
@@ -107,7 +108,17 @@
                     });
                 }
 
-
+                service.removeRecord = function(id, callback) {
+                    $http.post(baseUrl + '/remove/' + id).
+                    success(function (data, status, headers, config) {
+                        data.success = true;
+                        callback(data);
+                    }).
+                    error(function (data, status, headers, config) {
+                        console.log("POST Error in 'removeRecord() Status: " + status);
+                        callback({ "success": false });
+                    });
+                }
 
                 return service;
             });
@@ -118,7 +129,6 @@
                 dbFactory.getTypes(function(data) {
                     if (data.success) {
                         $scope.types = data.list;
-                        console.log(data.list);
                     }
                 });
 
@@ -151,6 +161,15 @@
                             }, 500);
                         });
                     clearForm();
+                }
+
+                $scope.remove = function (entry) {
+                    console.log(entry._id);
+                    dbFactory.removeRecord(entry._id, function (data) {
+                        if (data.success) {
+                            console.log(data);
+                        }
+                    });
                 }
 
                 $scope.removeRecord = function (engineer, entry) {
