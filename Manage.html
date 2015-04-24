@@ -24,9 +24,9 @@
                         <input class="col-xs-1 col-md-1 btn-success" ng-model="entry.priority" ng-model-options="{ updateOn: 'blur' }" ng-change="updateRecordPriority(engineerList.indexOf(engineer), entry)" />
                         <input class="col-xs-2 col-md-2 btn-primary" ng-model="entry.customerName" ng-change="updateRecord(engineerList.indexOf(engineer), entry)" />
                         <input class="col-xs-1 col-md-1 btn-primary" ng-model="entry.gearsId" ng-change="updateRecord(engineerList.indexOf(engineer), entry)" />
-                        <input class="col-xs-1 col-md-1 btn-info" ng-model="entry.typeNumber" disabled />
-                        <select class="col-xs-2 col-md-2 btn-primary" ng-model="entry.typeText" ng-change="updateRecordType(engineerList.indexOf(engineer), entry)">
-                            <option ng-repeat="type in types" ng-selected="type.$value == entry.typeText">{{type.$value}}</option>
+                        <input class="col-xs-1 col-md-1 btn-info" ng-model="entry.typeRefNumber" disabled />
+                        <select class="col-xs-2 col-md-2 btn-primary" ng-model="types" ng-change="updateRecordType(engineerList.indexOf(engineer), entry)">
+                            <option ng-repeat="type in types" ng-selected="entry.typeRefNumber - 1 == $index">{{type}}</option>
                         </select>
                         <input class="col-xs-2 col-md-2 btn-primary" ng-model="entry.engagementManager" ng-change="updateRecord(engineerList.indexOf(engineer), entry)" />
                         <input class="col-xs-1 col-md-1 btn-warning" ng-model="entry.hours" ng-model-options="{ updateOn: 'blur' }" ng-change="updateRecordHours(engineerList.indexOf(engineer))">
@@ -46,8 +46,9 @@
                         <input class="col-xs-2 col-md-2" value="" ng-model="customer" />
                         <input class="col-xs-1 col-md-1" value="" ng-model="gearsId" />
                         <input disabled class="col-xs-1 col-md-1" value="" ng-model="typeNumber" />
-                        <select class="col-xs-2 col-md-2 text-center" ng-model="typeText" ng-options="type.$value for type in types" ng-change="updateTypes()">
+                        <select class="col-xs-2 col-md-2 text-center" ng-model="typeText" ng-change="updateTypes()">
                             <option value="">Choose Class</option>
+                            <option value="$index" ng-repeat="type in types">{{type}}</option>
                         </select>
                         <input class="col-xs-2 col-md-2" value="" ng-model="em" />
                         <input class="col-xs-1 col-md-1" value="" ng-model="hours" />
@@ -62,48 +63,83 @@
         <script type="text/javascript" src="https://cdn.firebase.com/js/client/2.2.0/firebase.js"></script>
         <script type="text/javascript" src="https://cdn.firebase.com/libs/angularfire/0.9.2/angularfire.min.js"></script>
         <script>
-            var authToken = "";
-            var baseUrl = "";
             var app = angular.module("application", ["firebase"]);
+            var baseUrl = "http://localhost:3000";
 
-            app.controller("ManageCtrl", function ($scope, $firebase, $http) {
-                function authHandler(error) {
-                    if (error) {
-                        console.log("Login Failed!", error);
-                    } else {
-                        console.log("Authenticated successfully");
-                    }
+
+            app.factory("dbFactory", function($http) {
+                var service = {};
+                var baseUrl = "http://localhost:3000";
+
+                service.getUsers = function(callback) {
+                    $http.get(baseUrl + '/users').
+                    success(function (data, status, headers, config) {
+                        data.success = true;
+                        callback(data);
+                    }).
+                    error(function (data, status, headers, config) {
+                        console.log("GET Error in 'getUsers() Status: " + status);
+                        callback({"success": false});
+                    });
                 }
 
-                $http.get('http://localhost:3000/users').
-                  success(function (data, status, headers, config) {
-                        console.log(data[0].name);
+                service.getRecordsByUser = function(userName, index, callback) {
+                    $http.get(baseUrl + '/user/' + userName).
+                    success(function (data, status, headers, config) {
+                        data.success = true;
+                        callback(data, index);
                     }).
-                  error(function (data, status, headers, config) {
-                    console.log("GET Error:");
-                      console.log(headers);
-                      console.log(status);
-                      console.log(config);
-                  });
+                    error(function (data, status, headers, config) {
+                        console.log("GET Error in 'getRecordsByUser() Status: " + status);
+                        callback({ "success": false });
+                    });
+                }
 
-                new window.Firebase(baseUrl).authWithCustomToken(authToken, authHandler);
-                $scope.types = $firebase(new window.Firebase(baseUrl + "/types")).$asArray();
-                var scopes = $firebase(new window.Firebase(baseUrl + "/scopes")).$asArray();
-                $scope.engineerList = new Array();
-                $scope.recordsList = new Array();
+                service.getTypes = function (callback) {
+                    $http.get(baseUrl + '/types').
+                    success(function (data, status, headers, config) {
+                        data.success = true;
+                        callback(data);
+                    }).
+                    error(function (data, status, headers, config) {
+                        console.log("GET Error in 'getTypes() Status: " + status);
+                        callback({ "success": false });
+                    });
+                }
 
-                scopes.$loaded().then(function () {
-                    var num = scopes.length;
-                    for (var i = 0; i < num; i++) {
-                        //$scope.engineerList.push(scopes.$keyAt(i));
-                        var key = scopes.$keyAt(i);
-                        $scope.engineerList.push({ name: key, rank: scopes.$getRecord(key).rank });
+
+
+                return service;
+            });
+
+            app.controller("ManageCtrl", function ($scope, $firebase, $http, dbFactory) {
+
+                $scope.types = new Array();
+                dbFactory.getTypes(function(data) {
+                    if (data.success) {
+                        $scope.types = data.list;
+                        console.log(data.list);
                     }
+                });
 
-                    for (i = 0; i < num; i++) {
-                        var name = $scope.engineerList[i].name;
-                        var addr = baseUrl + "/scopes/" + name + "/records";
-                        $scope.recordsList.push($firebase(new window.Firebase(addr)).$asArray());
+                $scope.engineerList = new Array();
+                dbFactory.getUsers(function(data) {
+                    if (data.success) {
+                        $scope.engineerList = data;
+                    }
+                });
+
+                $scope.$watch("engineerList", function (newValue, oldValue) {
+                    if ($scope.engineerList.length > 0) {
+                        $scope.recordsList = new Array($scope.engineerList.length);
+                        for (var i = 0; i < $scope.engineerList.length; i++) {
+                            dbFactory.getRecordsByUser($scope.engineerList[i].name, i, function (data, index) {
+                                if (data.success) {
+                                    $scope.recordsList[index] = data;
+                                    console.log(data);
+                                }
+                            });
+                        }
                     }
                 });
 
@@ -175,7 +211,7 @@
                     forecast += entry.hours / hours;
                     return Math.round(forecast * 10) / 10;
                 }
-                
+
                 $scope.updateRecordPriority = function (engineerNum, entry) {
                     entry.priority = parseInt(entry.priority);
                     if (entry.priority < 1)
