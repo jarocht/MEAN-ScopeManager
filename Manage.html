@@ -31,7 +31,7 @@
                         <input class="col-xs-2 col-md-2 btn-primary" ng-model="entry.engagementManager" ng-change="updateRecord(engineerList.indexOf(engineer), entry)" />
                         <input class="col-xs-1 col-md-1 btn-warning" ng-model="entry.hours" ng-model-options="{ updateOn: 'blur' }" ng-change="updateRecordHours(engineerList.indexOf(engineer))">
                         <input class="col-xs-1 col-md-1 btn-info" ng-model="entry.forecast" disabled>
-                        <button class="col-xs-1 col-md-1 btn-danger" ng-click="remove(entry)">Delete</button>
+                        <button class="col-xs-1 col-md-1 btn-danger" ng-click="removeRecord(entry)">Delete</button>
                     </div>
                     <br />
                 </div>
@@ -41,17 +41,17 @@
                             <option value="">Choose Engineer:</option>
                         </select>
                     </div>
-                    <form ng-submit="addRecord(engineerList.indexOf(selectedEngineer), priority, customer, gearsId, typeNumber, typeText, em, hours)" class="row">
-                        <input class="col-xs-1 col-md-1" value="" ng-model="priority" ng-change="records.$save(entry)" />
-                        <input class="col-xs-2 col-md-2" value="" ng-model="customer" />
-                        <input class="col-xs-1 col-md-1" value="" ng-model="gearsId" />
-                        <input disabled class="col-xs-1 col-md-1" value="" ng-model="typeNumber" />
-                        <select class="col-xs-2 col-md-2 text-center" ng-model="typeText" ng-change="updateTypes()">
+                    <form ng-submit="addRecord(newRecord, selectedEngineer)" class="row">
+                        <input class="col-xs-1 col-md-1" value="" ng-model="newRecord.priority" ng-change="records.$save(entry)" />
+                        <input class="col-xs-2 col-md-2" value="" ng-model="newRecord.customerName" />
+                        <input class="col-xs-1 col-md-1" value="" ng-model="newRecord.gearsId" />
+                        <input disabled class="col-xs-1 col-md-1" value="" ng-model="newRecord.typeRefNumber" />
+                        <select class="col-xs-2 col-md-2 text-center" ng-model="newRecord.typeText" ng-change="updateTypes()">
                             <option value="">Choose Class</option>
-                            <option value="$index" ng-repeat="type in types">{{type}}</option>
+                            <option value="{{type}}" ng-repeat="type in types">{{type}}</option>
                         </select>
-                        <input class="col-xs-2 col-md-2" value="" ng-model="em" />
-                        <input class="col-xs-1 col-md-1" value="" ng-model="hours" />
+                        <input class="col-xs-2 col-md-2" value="" ng-model="newRecord.engagementManager" />
+                        <input class="col-xs-1 col-md-1" value="" ng-model="newRecord.hours" />
                         <input disabled class="col-xs-1 col-md-1">
                         <button class="col-xs-1 col-md-1 btn-success" type="submit">Add</button>
                     </form>
@@ -68,11 +68,11 @@
             var baseUrl = "http://localhost:3000";
 
 
-            app.factory("dbFactory", function($http) {
+            app.factory("dbFactory", function ($http) {
                 var service = {};
                 var baseUrl = "http://localhost:3000";
 
-                service.getUsers = function(callback) {
+                service.getUsers = function (callback) {
                     $http.get(baseUrl + '/users').
                     success(function (data, status, headers, config) {
                         data.success = true;
@@ -80,11 +80,11 @@
                     }).
                     error(function (data, status, headers, config) {
                         console.log("GET Error in 'getUsers() Status: " + status);
-                        callback({"success": false});
+                        callback({ "success": false });
                     });
                 }
 
-                service.getRecordsByUser = function(userName, index, callback) {
+                service.getRecordsByUser = function (userName, index, callback) {
                     $http.get(baseUrl + '/user/' + userName).
                     success(function (data, status, headers, config) {
                         data.success = true;
@@ -108,7 +108,7 @@
                     });
                 }
 
-                service.removeRecord = function(id, callback) {
+                service.removeRecord = function (id, callback) {
                     $http.post(baseUrl + '/remove/' + id).
                     success(function (data, status, headers, config) {
                         data.success = true;
@@ -120,20 +120,33 @@
                     });
                 }
 
+                service.addRecord = function (record, callback) {
+                    console.log(record);
+                    $http.post(baseUrl + '/add', record).
+                    success(function (data, status, headers, config) {
+                        data.success = true;
+                        callback(data);
+                    }).
+                    error(function (data, status, headers, config) {
+                        console.log("POST Error in 'addRecord() Status: " + status);
+                        callback({ "success": false });
+                    });
+                }
+
                 return service;
             });
 
             app.controller("ManageCtrl", function ($scope, $firebase, $http, dbFactory) {
 
                 $scope.types = new Array();
-                dbFactory.getTypes(function(data) {
+                dbFactory.getTypes(function (data) {
                     if (data.success) {
                         $scope.types = data.list;
                     }
                 });
 
                 $scope.engineerList = new Array();
-                dbFactory.getUsers(function(data) {
+                dbFactory.getUsers(function (data) {
                     if (data.success) {
                         $scope.engineerList = data;
                     }
@@ -153,17 +166,7 @@
                     }
                 });
 
-                $scope.addRecord = function (engineerNum, priority, customerName, gid, typeN, typeT, em, hours) {
-                    $scope.recordsList[engineerNum].$add({ priority: parseInt(priority), customerName: customerName, gearsId: gid, typeNumber: parseInt(typeN), typeText: typeT.$value, engagementManager: em, hours: parseInt(hours), forecast: 0 })
-                        .then(function (ref) {
-                            setTimeout(function() {
-                                $scope.updateRecordPriority(engineerNum, $scope.recordsList[engineerNum].$getRecord(ref.key()));
-                            }, 500);
-                        });
-                    clearForm();
-                }
-
-                $scope.remove = function (entry) {
+                $scope.removeRecord = function (entry) {
                     console.log(entry._id);
                     dbFactory.removeRecord(entry._id, function (data) {
                         if (data.success) {
@@ -172,15 +175,18 @@
                     });
                 }
 
-                $scope.removeRecord = function (engineer, entry) {
-                    var p = entry.priority;
-                    var engineerNum = $scope.engineerList.indexOf(engineer);
-                    $scope.recordsList[engineerNum].$remove(entry).then(function() {
-                        var index = findNextHigherPriorityIndex(engineerNum, p);
-                        while (index != -1) {
-                            p = $scope.recordsList[engineerNum][index].priority--;
-                            $scope.recordsList[engineerNum].$save(index);
-                            index = findNextHigherPriorityIndex(engineerNum, p);
+                $scope.newRecord = {};
+                $scope.addRecord = function (entry, owner) {
+                    entry.owner = owner.name;
+                    entry.priority = parseInt(entry.priority);
+                    entry.gearsId = parseInt(entry.gearsId);
+                    entry.hours = parseInt(entry.hours);
+
+                    //console.log(entry);
+
+                    dbFactory.addRecord(entry, function(data) {
+                        if (data.success) {
+                            console.log(data);
                         }
                     });
                 }
@@ -319,7 +325,8 @@
                 }
 
                 $scope.updateTypes = function () {
-                    $scope.typeNumber = $scope.types.indexOf($scope.typeText) + 1;
+                    var index = $scope.types.indexOf($scope.newRecord.typeText);
+                    $scope.newRecord.typeRefNumber = index > -1 ? index + 1 : null;
                 }
 
             });

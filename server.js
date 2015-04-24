@@ -1,9 +1,11 @@
+var bodyParser = require('body-parser');
 var mongoose = require('mongoose');
 var express = require('express');
 var cors = require('cors');
 var app = express();
 
 app.use(cors());
+app.use(bodyParser());
 app.use(function (req, res, next) {
     res.contentType('application/json');
     next();
@@ -44,6 +46,15 @@ app.post('/remove/:id', function (req, res) {
     ScopeRecord.remove({ _id: req.params.id }, function (err) {
         if (err) return console.error(err);
         res.send({ "removed": req.params.id });
+    });
+});
+
+app.post('/add', function (req, res) {
+    console.log("body: " + JSON.stringify(req.body));
+    var record = new ScopeRecord(req.body);
+    record.save(function (err, post) {
+        if (err) return console.error(err);
+        res.send({ "success": true });
     });
 });
 
