@@ -21,15 +21,15 @@
                         <div class="col-xs-1 col-md-1">Forecast</div>
                     </div>
                     <div class="row text-left" ng-repeat="entry in recordsList[$index] | orderBy:'priority'">
-                        <input class="col-xs-1 col-md-1 btn-success" ng-model="entry.priority" ng-model-options="{ updateOn: 'blur' }" ng-change="updateRecord(entry)" />
-                        <input class="col-xs-2 col-md-2 btn-primary" ng-model="entry.customerName" ng-change="updateRecord(entry)" />
-                        <input class="col-xs-1 col-md-1 btn-primary" ng-model="entry.gearsId" ng-change="updateRecord(entry)" />
-                        <input class="col-xs-1 col-md-1 btn-info" ng-model="entry.typeRefNumber" disabled ng-change="updateRecord(entry)" />
+                        <input class="col-xs-1 col-md-1 btn-success" ng-model="entry.priority" ng-model-options="{ updateOn: 'blur' }" ng-change="updateRecord(entry, true)" />
+                        <input class="col-xs-2 col-md-2 btn-primary" ng-model="entry.customerName" ng-model-options="{ updateOn: 'blur' }" ng-change="updateRecord(entry)" />
+                        <input class="col-xs-1 col-md-1 btn-primary" ng-model="entry.gearsId" ng-model-options="{ updateOn: 'blur' }" ng-change="updateRecord(entry)" />
+                        <input class="col-xs-1 col-md-1 btn-info" ng-model="entry.typeRefNumber" disabled />
                         <select class="col-xs-2 col-md-2 btn-primary" ng-model="entry.typeText" ng-change="updateRecord(entry)">
                             <option ng-repeat="type in types" ng-selected="entry.typeRefNumber - 1 == $index">{{type}}</option>
                         </select>
-                        <input class="col-xs-2 col-md-2 btn-primary" ng-model="entry.engagementManager" ng-change="updateRecord(entry)" />
-                        <input class="col-xs-1 col-md-1 btn-warning" ng-model="entry.hours" ng-model-options="{ updateOn: 'blur' }" ng-change="updateRecord(entry)">
+                        <input class="col-xs-2 col-md-2 btn-primary" ng-model="entry.engagementManager" ng-model-options="{ updateOn: 'blur' }" ng-change="updateRecord(entry)" />
+                        <input class="col-xs-1 col-md-1 btn-warning" ng-model="entry.hours" ng-model-options="{ updateOn: 'blur' }" ng-change="updateRecord(entry, true)">
                         <input class="col-xs-1 col-md-1 btn-info" ng-model="entry.forecast" disabled>
                         <button class="col-xs-1 col-md-1 btn-danger" ng-click="removeRecord(entry)">Delete</button>
                     </div>
@@ -218,7 +218,7 @@
                     });
                 }
 
-                $scope.updateRecord = function (record) {
+                $scope.updateRecord = function (record, reload) {
                     if (record.typeText != undefined) {
                         var index = $scope.types.indexOf(record.typeText);
                         record.typeRefNumber = index > -1 ? index + 1 : null;
@@ -227,7 +227,8 @@
                     dbFactory.updateRecord(record, function(data) {
                         if (data.success) {
                             console.log(data);
-                            loadRecords();
+                            if (reload)
+                                loadRecords();
                         }
                     });
                 }
