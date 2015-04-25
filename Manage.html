@@ -165,12 +165,26 @@
                 });
 
                 function loadRecords() {
-                    //TODO Check Priority and Forcast data
                     $scope.recordsList = new Array($scope.engineerList.length);
                     for (var i = 0; i < $scope.engineerList.length; i++) {
                         dbFactory.getRecordsByUser($scope.engineerList[i].name, i, function (data, ownerIndex) {
                             if (data.success) {
                                 $scope.recordsList[ownerIndex] = data;
+                                //TODO Check Priority
+
+                                //These two loops handle hours forecasting and rounding
+                                //The alternative is a single loop where we add the new hours to the previously rounded forecast
+                                //This method preserves total hours for each forecast before rounding
+                                for (var j = 0; j < $scope.recordsList[ownerIndex].length; j++) {
+                                    $scope.recordsList[ownerIndex][j].forecast = $scope.recordsList[ownerIndex][j].hours;
+                                    if (j > 0) {
+                                        $scope.recordsList[ownerIndex][j].forecast += $scope.recordsList[ownerIndex][j - 1].hours;
+                                    }
+                                }
+                                for (j = 0; j < $scope.recordsList[ownerIndex].length; j++) {
+                                    var totalHours = $scope.recordsList[ownerIndex][j].forecast / $scope.engineerList[ownerIndex].hours;
+                                    $scope.recordsList[ownerIndex][j].forecast = Math.round(totalHours * 10) / 10;
+                                }
                             }
                         });
                     }                    
@@ -213,6 +227,7 @@
                     dbFactory.updateRecord(record, function(data) {
                         if (data.success) {
                             console.log(data);
+                            loadRecords();
                         }
                     });
                 }

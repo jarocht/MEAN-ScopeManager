@@ -5,7 +5,7 @@ var cors = require('cors');
 var app = express();
 
 app.use(cors());
-app.use(bodyParser());
+app.use(bodyParser.json());
 app.use(function (req, res, next) {
     res.contentType('application/json');
     next();
@@ -109,7 +109,8 @@ var ScopeTypes = mongoose.model('Types', scopeTypeSchema);
 var userSchema = new mongoose.Schema({
     "name": String,
     "rank": Number,
-    "title": String
+    "title": String,
+    "hours": Number
 });
 var User = mongoose.model('Users', userSchema);
 
