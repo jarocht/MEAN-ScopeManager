@@ -114,12 +114,12 @@
                             if (data.success) {
                                 $scope.recordsList[ownerIndex] = data;
                                 for (var j = 0; j < $scope.recordsList[ownerIndex].length; j++) {
-                                    $scope.recordsList[ownerIndex][j].forecast = $scope.recordsList[ownerIndex][j].hours;
-                                    if (j > 0) {
-                                        $scope.recordsList[ownerIndex][j].forecast += $scope.recordsList[ownerIndex][j - 1].hours;
+                                    $scope.recordsList[ownerIndex][j].forecast = 0;
+                                    for (var k = j; k >= 0; k--) {
+                                        $scope.recordsList[ownerIndex][j].forecast += $scope.recordsList[ownerIndex][k].hours;
                                     }
                                 }
-                                $scope.engineerList[ownerIndex].forecast = Math.round($scope.recordsList[ownerIndex][j - 1].forecast / $scope.engineerList[ownerIndex].hours * 10) / 10;
+                                $scope.engineerList[ownerIndex].forecast = Math.round($scope.recordsList[ownerIndex][$scope.recordsList[ownerIndex].length - 1].forecast / $scope.engineerList[ownerIndex].hours * 10) / 10;
                             }
                         });
                     }
