@@ -204,7 +204,7 @@
                 $scope.addRecord = function (entry) {
                     entry.priority = parseInt(entry.priority);
                     entry.gearsId = parseInt(entry.gearsId);
-                    entry.hours = parseInt(entry.hours);
+                    entry.hours = parseFloat(entry.hours);
 
                     dbFactory.addRecord(entry, function(data) {
                         if (data.success) {
@@ -219,7 +219,7 @@
                         var index = $scope.types.indexOf(record.typeText);
                         record.typeRefNumber = index > -1 ? index + 1 : null;
                     }
-
+                    
                     dbFactory.updateRecord(record, function(data) {
                         if (data.success) {
                             if (reload)

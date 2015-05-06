@@ -2,6 +2,19 @@ var bodyParser = require('body-parser');
 var mongoose = require('mongoose');
 var express = require('express');
 var cors = require('cors');
+var fs = require('fs');
+var https = require('https');
+//NOTE: These file paths will have to be absolute if installed as a service
+var cert = fs.readFileSync('./certificate.pem');
+var mid_ca = fs.readFileSync('./mid-certificate.pem');
+var int_ca = fs.readFileSync('./int-certificate.pem');
+var https_options = {
+    key: cert,
+    cert: cert,
+    ca: [int_ca, mid_ca]
+};
+var PORT = 3000;
+
 var app = express();
 
 app.use(cors());
@@ -73,14 +86,8 @@ app.post('/add', function (req, res) {
     });
 });
 
-var server = app.listen(3000, function () {
-
-    var host = server.address().address;
-    var port = server.address().port;
-
-    console.log('Server listening at http://%s:%s', host, port);
-
-});
+server = https.createServer(https_options, app).listen(PORT, HOST);
+console.log('HTTPS Server listening on %s:%s', HOST, PORT);
 
 mongoose.connect('mongodb://Jaroch02.supportlab.inin.com/test');
 //mongoose.set('debug', true);
@@ -118,11 +125,3 @@ var defaultSchema = mongoose.Schema({
     name: String
 });
 var Default = mongoose.model('Defaults', defaultSchema);
-
-var user = new User({
-    "name": "Tim Jaroch",
-    "rank": 3,
-    "title": "Software Engineer"
-});
-
-//user.save();
